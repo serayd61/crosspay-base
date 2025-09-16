@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrossPay - Base Blockchain Payment Bridge</title>
+    
+    <!-- Core Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success: #4caf50;
+            --error: #f44336;
+            --warning: #ff9800;
+            --bg-light: #f5f5f5;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .main-container {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--primary-gradient);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .wallet-selector {
+            padding: 30px;
+            background: white;
+        }
+        
+        .wallet-selector h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        .wallet-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .wallet-option {
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .wallet-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .wallet-option .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .wallet-option .wallet-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: var(--bg-light);
+            border-radius: 10px;
+        }
+        
+        .wallet-option .wallet-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .wallet-option .wallet-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            background: var(--bg-light);
+            border-radius: 6px;
+        }
+        
+        .wallet-option.detected .wallet-status {
+            color: var(--success);
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .connected-header {
+            background: var(--primary-gradient);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        
+        .connected-header .address {
+            font-family: monospace;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .connected-header button {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .connected-header button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .balance-card {
+            background: var(--primary-gradient);
+            margin: 20px;
+            padding: 25px;
+            border-radius: 15px;
+            color: white;
+            box-shadow: var(--shadow);
+        }
+        
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .balance-amount {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .balance-usd {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+        
+        .tabs {
+            display: flex;
+            padding: 0 20px;
+            gap: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            padding: 20px;
+            min-height: 400px;
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input, 
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+        
+        .form-group input:focus, 
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-with-max {
+            position: relative;
+        }
+        
+        .max-button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            margin: 20px 0;
+        }
+        
+        .qr-container canvas {
+            margin: 20px auto;
+        }
+        
+        .qr-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+        
+        .transaction-list {
+            margin-top: 20px;
+        }
+        
+        .transaction-item {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .transaction-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .transaction-type {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .transaction-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .transaction-amount {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .transaction-amount.positive {
+            color: var(--success);
+        }
+        
+        .transaction-amount.negative {
+            color: var(--error);
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert.success {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .alert.error {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+        
+        .alert.warning {
+            background: rgba(255, 152, 0, 0.1);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                padding: 0 10px;
+            }
+            
+            .tab {
+                padding: 12px 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Initial State: Wallet Selection -->
+        <div id="walletSelection">
+            <div class="header">
+                <h1>⚡ CrossPay</h1>
+                <p>Base Blockchain Payment Bridge</p>
+            </div>
+            
+            <div class="wallet-selector">
+                <h2>Connect Your Wallet</h2>
+                <div class="wallet-options">
+                    <div class="wallet-option" onclick="connectWallet('metamask')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">🦊</div>
+                            <div class="wallet-name">MetaMask</div>
+                        </div>
+                        <div class="wallet-status" id="metamask-status">Popular</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="connectWallet('coinbase')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">💙</div>
+                            <div class="wallet-name">Coinbase Wallet</div>
+                        </div>
+                        <div class="wallet-status" id="coinbase-status">Recommended</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="connectWallet('walletconnect')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">🔗</div>
+                            <div class="wallet-name">WalletConnect</div>
+                        </div>
+                        <div class="wallet-status">QR Code</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="connectWallet('browser')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">🌐</div>
+                            <div class="wallet-name">Browser Wallet</div>
+                        </div>
+                        <div class="wallet-status" id="browser-status">Auto-detect</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Connected State: Main App -->
+        <div id="mainApp" class="hidden">
+            <div class="connected-header">
+                <div class="address" id="userAddress">0x0000...0000</div>
+                <button onclick="disconnect()">Disconnect</button>
+            </div>
+            
+            <div class="balance-card">
+                <div class="balance-label">Available Balance</div>
+                <div class="balance-amount" id="balanceAmount">0.0000 ETH</div>
+                <div class="balance-usd" id="balanceUsd">≈ $0.00 USD</div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('pay')">Pay</button>
+                <button class="tab" onclick="switchTab('receive')">Receive</button>
+                <button class="tab" onclick="switchTab('merchant')">Merchant</button>
+                <button class="tab" onclick="switchTab('history')">History</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Pay Panel -->
+                <div id="payPanel" class="panel active">
+                    <div class="form-group">
+                        <label>Recipient Address or ENS</label>
+                        <input type="text" id="recipientAddress" placeholder="0x... or name.eth">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Amount (ETH)</label>
+                        <div class="input-with-max">
+                            <input type="number" id="payAmount" placeholder="0.0000" step="0.0001">
+                            <button class="max-button" onclick="setMaxAmount()">MAX</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Note (Optional)</label>
+                        <input type="text" id="paymentNote" placeholder="Coffee payment">
+                    </div>
+                    
+                    <button class="btn" onclick="makePayment()">
+                        <span id="payButtonText">Send Payment</span>
+                    </button>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Sent</div>
+                            <div class="stat-value" id="totalSent">0.00 ETH</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Transactions</div>
+                            <div class="stat-value" id="txCount">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Receive Panel -->
+                <div id="receivePanel" class="panel">
+                    <div class="form-group">
+                        <label>Amount to Request (Optional)</label>
+                        <input type="number" id="requestAmount" placeholder="0.0000" step="0.0001">
+                    </div>
+                    
+                    <button class="btn" onclick="generatePaymentQR()">Generate Payment QR</button>
+                    
+                    <div class="qr-container" id="receiveQR" style="display: none;">
+                        <div id="qrCodeReceive"></div>
+                        <div class="qr-info">
+                            Scan this QR code with any wallet to pay
+                        </div>
+                        <button class="btn btn-secondary" onclick="sharePaymentLink()">Share Link</button>
+                    </div>
+                </div>
+                
+                <!-- Merchant Panel -->
+                <div id="merchantPanel" class="panel">
+                    <div id="merchantSetup">
+                        <h3 style="margin-bottom: 20px;">Register Your Business</h3>
+                        <div class="form-group">
+                            <label>Business Name</label>
+                            <input type="text" id="businessName" placeholder="My Coffee Shop">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Business Type</label>
+                            <select id="businessType">
+                                <option value="cafe">Cafe/Restaurant</option>
+                                <option value="retail">Retail Store</option>
+                                <option value="service">Service Provider</option>
+                                <option value="online">Online Business</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn" onclick="registerMerchant()">Register as Merchant</button>
+                    </div>
+                    
+                    <div id="merchantDashboard" class="hidden">
+                        <h3 style="margin-bottom: 20px;">Merchant Dashboard</h3>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Today's Sales</div>
+                                <div class="stat-value" id="todaySales">0.00 ETH</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Total Revenue</div>
+                                <div class="stat-value" id="totalRevenue">0.00 ETH</div>
+                            </div>
+                        </div>
+                        
+                        <div class="qr-container">
+                            <h4 style="margin-bottom: 10px;">Payment QR Code</h4>
+                            <div id="merchantQR"></div>
+                            <div class="qr-info">
+                                Display this at your counter for customer payments
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-secondary" onclick="downloadQR()">Download QR Code</button>
+                        <button class="btn" onclick="withdrawMerchantFunds()">Withdraw Funds</button>
+                    </div>
+                </div>
+                
+                <!-- History Panel -->
+                <div id="historyPanel" class="panel">
+                    <h3 style="margin-bottom: 20px;">Transaction History</h3>
+                    <div class="transaction-list" id="transactionList">
+                        <p style="text-align: center; color: #666;">No transactions yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+    </div>
+    
+    <script>
+        // Configuration
+        const CONTRACT_ADDRESS = "0x4d45baa1909b7f061b514ef50034c55d0b79b262";
+        const CONTRACT_ABI = [
+            "function registerMerchant(string memory _businessName, string memory _businessType) external",
+            "function deposit() external payable",
+            "function payWithQR(address merchantAddress, uint256 amount, string memory invoiceId) external",
+            "function payDirect(address merchantAddress) external payable",
+            "function withdraw(uint256 amount) external",
+            "function getBalance(address user) external view returns (uint256)",
+            "function getMerchantStats(address merchant) external view returns (string memory, uint256, uint256, uint256)",
+            "function merchants(address) external view returns (string memory businessName, string memory businessType, bool isActive, uint256 totalReceived, uint256 dailyVolume, uint256 lastResetDate, uint256 dailyLimit)",
+            "event PaymentProcessed(address indexed customer, address indexed merchant, uint256 amount, string invoiceId)",
+            "event MerchantRegistered(address indexed merchant, string businessName)",
+            "event FundsDeposited(address indexed user, uint256 amount)",
+            "event FundsWithdrawn(address indexed user, uint256 amount)"
+        ];
+        
+        // State
+        let provider = null;
+        let signer = null;
+        let contract = null;
+        let userAddress = null;
+        let currentBalance = 0;
+        let transactions = [];
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            checkWalletAvailability();
+            
+            // Check if already connected
+            if (localStorage.getItem('connected')) {
+                const lastWallet = localStorage.getItem('lastWallet');
+                if (lastWallet) {
+                    connectWallet(lastWallet, true);
+                }
+            }
+        });
+        
+        // Check wallet availability
+        function checkWalletAvailability() {
+            if (typeof window.ethereum !== 'undefined') {
+                if (window.ethereum.isMetaMask) {
+                    document.getElementById('metamask-status').textContent = 'Detected';
+                    document.getElementById('metamask-status').style.color = '#4caf50';
+                }
+                if (window.ethereum.isCoinbaseWallet) {
+                    document.getElementById('coinbase-status').textContent = 'Detected';
+                    document.getElementById('coinbase-status').style.color = '#4caf50';
+                }
+                document.getElementById('browser-status').textContent = 'Available';
+                document.getElementById('browser-status').style.color = '#4caf50';
+            }
+        }
+        
+        // Connect wallet
+        async function connectWallet(walletType, autoConnect = false) {
+            try {
+                let ethereum = null;
+                
+                switch(walletType) {
+                    case 'metamask':
+                        if (!window.ethereum || !window.ethereum.isMetaMask) {
+                            if (!autoConnect) {
+                                window.open('https://metamask.io/download/', '_blank');
+                            }
+                            throw new Error('MetaMask not installed');
+                        }
+                        ethereum = window.ethereum;
+                        break;
+                        
+                    case 'coinbase':
+                        if (!window.ethereum || !window.ethereum.isCoinbaseWallet) {
+                            if (!autoConnect) {
+                                window.open('https://www.coinbase.com/wallet', '_blank');
+                            }
+                            throw new Error('Coinbase Wallet not installed');
+                        }
+                        ethereum = window.ethereum;
+                        break;
+                        
+                    case 'walletconnect':
+                        showAlert('WalletConnect integration coming soon!', 'warning');
+                        return;
+                        
+                    case 'browser':
+                        if (!window.ethereum) {
+                            throw new Error('No wallet detected');
+                        }
+                        ethereum = window.ethereum;
+                        break;
+                        
+                    default:
+                        throw new Error('Unknown wallet type');
+                }
+                
+                // Request accounts
+                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length === 0) {
+                    throw new Error('No accounts available');
+                }
+                
+                // Setup provider
+                provider = new ethers.providers.Web3Provider(ethereum);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                
+                // Check network
+                const network = await provider.getNetwork();
+                if (network.chainId !== 8453 && network.chainId !== 84532) {
+                    showAlert('Please switch to Base network', 'warning');
+                    
+                    try {
+                        await ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x2105' }], // Base mainnet
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            // Add Base network
+                            await ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x2105',
+                                    chainName: 'Base',
+                                    nativeCurrency: {
+                                        name: 'Ether',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: ['https://mainnet.base.org'],
+                                    blockExplorerUrls: ['https://basescan.org']
+                                }]
+                            });
+                        } else {
+                            throw switchError;
+                        }
+                    }
+                }
+                
+                // Setup contract
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                
+                // Update UI
+                document.getElementById('walletSelection').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userAddress').textContent = 
+                    userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+                
+                // Save connection
+                localStorage.setItem('connected', 'true');
+                localStorage.setItem('lastWallet', walletType);
+                
+                // Load data
+                await updateBalance();
+                await checkMerchantStatus();
+                await loadTransactionHistory();
+                
+                // Setup listeners
+                setupEventListeners();
+                
+                showAlert('Wallet connected successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                if (!autoConnect) {
+                    showAlert('Connection failed: ' + error.message, 'error');
+                }
+                localStorage.removeItem('connected');
+                localStorage.removeItem('lastWallet');
+            }
+        }
+        
+        // Disconnect wallet
+        function disconnect() {
+            provider = null;
+            signer = null;
+            contract = null;
+            userAddress = null;
+            
+            localStorage.removeItem('connected');
+            localStorage.removeItem('lastWallet');
+            
+            document.getElementById('walletSelection').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            
+            showAlert('Wallet disconnected', 'success');
+        }
+        
+        // Update balance
+        async function updateBalance() {
+            try {
+                // Get ETH balance
+                const ethBalance = await provider.getBalance(userAddress);
+                // Get contract balance
+                const contractBalance = await contract.getBalance(userAddress);
+                
+                // Total balance
+                const totalBalance = ethBalance.add(contractBalance);
+                currentBalance = parseFloat(ethers.utils.formatEther(totalBalance));
+                
+                // Update UI
+                document.getElementById('balanceAmount').textContent = 
+                    currentBalance.toFixed(4) + ' ETH';
+                
+                // Estimate USD value (mock rate)
+                const ethPrice = 2500; // Mock ETH price
+                const usdValue = (currentBalance * ethPrice).toFixed(2);
+                document.getElementById('balanceUsd').textContent = `≈ $${usdValue} USD`;
+                
+            } catch (error) {
+                console.error('Balance update error:', error);
+            }
+        }
+        
+        // Check merchant status
+        async function checkMerchantStatus() {
+            try {
+                const merchant = await contract.merchants(userAddress);
+                
+                if (merchant.isActive) {
+                    document.getElementById('merchantSetup').classList.add('hidden');
+                    document.getElementById('merchantDashboard').classList.remove('hidden');
+                    
+                    // Update merchant stats
+                    await updateMerchantStats();
+                    
+                    // Generate merchant QR
+                    generateMerchantQR();
+                }
+            } catch (error) {
+                console.error('Merchant check error:', error);
+            }
+        }
+        
+        // Update merchant stats
+        async function updateMerchantStats() {
+            try {
+                const stats = await contract.getMerchantStats(userAddress);
+                
+                document.getElementById('todaySales').textContent = 
+                    parseFloat(ethers.utils.formatEther(stats[2])).toFixed(4) + ' ETH';
+                document.getElementById('totalRevenue').textContent = 
+                    parseFloat(ethers.utils.formatEther(stats[1])).toFixed(4) + ' ETH';
+                    
+            } catch (error) {
+                console.error('Stats update error:', error);
+            }
+        }
+        
+        // Register merchant
+        async function registerMerchant() {
+            try {
+                const name = document.getElementById('businessName').value;
+                const type = document.getElementById('businessType').value;
+                
+                if (!name) {
+                    showAlert('Please enter business name', 'error');
+                    return;
+                }
+                
+                showAlert('Registering merchant...', 'warning');
+                
+                const tx = await contract.registerMerchant(name, type);
+                await tx.wait();
+                
+                showAlert('Merchant registered successfully!', 'success');
+                await checkMerchantStatus();
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAlert('Registration failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Make payment
+        async function makePayment() {
+            try {
+                const recipient = document.getElementById('recipientAddress').value;
+                const amount = document.getElementById('payAmount').value;
+                const note = document.getElementById('paymentNote').value || 'Payment';
+                
+                if (!recipient || !amount) {
+                    showAlert('Please fill all required fields', 'error');
+                    return;
+                }
+                
+                // Resolve ENS if needed
+                let recipientAddress = recipient;
+                if (recipient.endsWith('.eth')) {
+                    recipientAddress = await provider.resolveName(recipient);
+                    if (!recipientAddress) {
+                        showAlert('Invalid ENS name', 'error');
+                        return;
+                    }
+                }
+                
+                showAlert('Processing payment...', 'warning');
+                
+                const amountWei = ethers.utils.parseEther(amount);
+                const invoiceId = 'PAY-' + Date.now();
+                
+                // Check if merchant
+                const merchant = await contract.merchants(recipientAddress);
+                
+                if (merchant.isActive) {
+                    // Pay to merchant
+                    const tx = await contract.payWithQR(recipientAddress, amountWei, invoiceId);
+                    await tx.wait();
+                } else {
+                    // Regular transfer
+                    const tx = await signer.sendTransaction({
+                        to: recipientAddress,
+                        value: amountWei
+                    });
+                    await tx.wait();
+                }
+                
+                showAlert('Payment successful!', 'success');
+                
+                // Clear form
+                document.getElementById('recipientAddress').value = '';
+                document.getElementById('payAmount').value = '';
+                document.getElementById('paymentNote').value = '';
+                
+                // Update balance
+                await updateBalance();
+                
+                // Add to history
+                addTransaction({
+                    type: 'Sent',
+                    amount: amount,
+                    address: recipientAddress,
+                    note: note,
+                    timestamp: Date.now()
+                });
+                
+            } catch (error) {
+                console.error('Payment error:', error);
+                showAlert('Payment failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Set max amount
+        function setMaxAmount() {
+            document.getElementById('payAmount').value = currentBalance.toFixed(4);
+        }
+        
+        // Generate payment QR for receiving
+        function generatePaymentQR() {
+            const amount = document.getElementById('requestAmount').value || '0';
+            
+            const paymentData = {
+                to: userAddress,
+                amount: amount,
+                network: 'base',
+                chainId: 8453
+            };
+            
+            const canvas = document.createElement('canvas');
+            QRCode.toCanvas(canvas, JSON.stringify(paymentData), {
+                width: 256,
+                margin: 2
+            }, function (error) {
+                if (error) console.error(error);
+                
+                const container = document.getElementById('qrCodeReceive');
+                container.innerHTML = '';
+                container.appendChild(canvas);
+                
+                document.getElementById('receiveQR').style.display = 'block';
+            });
+        }
+        
+        // Generate merchant QR
+        function generateMerchantQR() {
+            const merchantData = {
+                merchant: userAddress,
+                network: 'base',
+                contract: CONTRACT_ADDRESS,
+                type: 'merchant'
+            };
+            
+            const canvas = document.createElement('canvas');
+            QRCode.toCanvas(canvas, JSON.stringify(merchantData), {
+                width: 256,
+                margin: 2
+            }, function (error) {
+                if (error) console.error(error);
+                
+                const container = document.getElementById('merchantQR');
+                container.innerHTML = '';
+                container.appendChild(canvas);
+            });
+        }
+        
+        // Share payment link
+        function sharePaymentLink() {
+            const amount = document.getElementById('requestAmount').value || '0';
+            const link = `${window.location.origin}?pay=${userAddress}&amount=${amount}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'CrossPay Payment Request',
+                    text: `Pay ${amount} ETH to ${userAddress}`,
+                    url: link
+                });
+            } else {
+                navigator.clipboard.writeText(link);
+                showAlert('Payment link copied to clipboard!', 'success');
+            }
+        }
+        
+        // Download QR code
+        function downloadQR() {
+            const canvas = document.querySelector('#merchantQR canvas');
+            if (canvas) {
+                const url = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'crosspay-qr.png';
+                a.click();
+            }
+        }
+        
+        // Withdraw merchant funds
+        async function withdrawMerchantFunds() {
+            try {
+                const balance = await contract.getBalance(userAddress);
+                
+                if (balance.isZero()) {
+                    showAlert('No funds to withdraw', 'error');
+                    return;
+                }
+                
+                showAlert('Processing withdrawal...', 'warning');
+                
+                const tx = await contract.withdraw(balance);
+                await tx.wait();
+                
+                showAlert('Withdrawal successful!', 'success');
+                await updateBalance();
+                await updateMerchantStats();
+                
+            } catch (error) {
+                console.error('Withdrawal error:', error);
+                showAlert('Withdrawal failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Switch tabs
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update panels
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Panel').classList.add('active');
+        }
+        
+        // Add transaction to history
+        function addTransaction(tx) {
+            transactions.unshift(tx);
+            updateTransactionList();
+        }
+        
+        // Load transaction history
+        async function loadTransactionHistory() {
+            // This would load from contract events or local storage
+            // For now, using mock data
+            transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+            updateTransactionList();
+        }
+        
+        // Update transaction list UI
+        function updateTransactionList() {
+            const container = document.getElementById('transactionList');
+            
+            if (transactions.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">No transactions yet</p>';
+                return;
+            }
+            
+            container.innerHTML = transactions.map(tx => `
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <div class="transaction-type">${tx.type}</div>
+                        <div class="transaction-time">${new Date(tx.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div class="transaction-amount ${tx.type === 'Sent' ? 'negative' : 'positive'}">
+                        ${tx.type === 'Sent' ? '-' : '+'} ${tx.amount} ETH
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update stats
+            const sent = transactions
+                .filter(tx => tx.type === 'Sent')
+                .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+            
+            document.getElementById('totalSent').textContent = sent.toFixed(2) + ' ETH';
+            document.getElementById('txCount').textContent = transactions.length;
+            
+            // Save to local storage
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            if (!contract) return;
+            
+            // Listen for payment events
+            contract.on('PaymentProcessed', async (customer, merchant, amount, invoiceId) => {
+                if (customer === userAddress || merchant === userAddress) {
+                    await updateBalance();
+                    
+                    addTransaction({
+                        type: customer === userAddress ? 'Sent' : 'Received',
+                        amount: ethers.utils.formatEther(amount),
+                        address: customer === userAddress ? merchant : customer,
+                        note: invoiceId,
+                        timestamp: Date.now()
+                    });
+                }
+            });
+            
+            // Listen for deposit events
+            contract.on('FundsDeposited', async (user, amount) => {
+                if (user === userAddress) {
+                    await updateBalance();
+                    showAlert('Funds deposited successfully!', 'success');
+                }
+            });
+        }
+        
+        // Show alert
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${type}`;
+            alertDiv.innerHTML = `
+                <span>${message}</span>
+            `;
+            
+            const container = document.getElementById('alertContainer');
+            container.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+        
+        // Auto-refresh
+        setInterval(async () => {
+            if (contract && userAddress) {
+                await updateBalance();
+                
+                const merchantDashboard = document.getElementById('merchantDashboard');
+                if (!merchantDashboard.classList.contains('hidden')) {
+                    await updateMerchantStats();
+                }
+            }
+        }, 30000); // Every 30 seconds
+        
+        // Handle deep links
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('pay')) {
+            const payTo = urlParams.get('pay');
+            const amount = urlParams.get('amount');
+            
+            // Auto-fill payment form after connection
+            window.addEventListener('walletConnected', () => {
+                document.getElementById('recipientAddress').value = payTo;
+                if (amount) {
+                    document.getElementById('payAmount').value = amount;
+                }
+                switchTab('pay');
+            });
+        }
+    </script>
+</body>
+</html>
