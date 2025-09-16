@@ -175,7 +175,7 @@ The frontend provides a complete user interface for:
 - Multi-wallet connection (MetaMask, Coinbase, WalletConnect)
 - Balance management
 - Payment processing
-- QR code generation and scanning
+- QR code generation and scanning with camera
 - Merchant dashboard
 - Transaction history
 
@@ -187,7 +187,19 @@ Supported wallets:
 - WalletConnect (coming soon)
 - Browser-injected wallets
 
-### QR Code Format
+### QR Code System
+
+#### QR Code Generation
+The frontend automatically generates QR codes for:
+- **Payment Requests**: Users can generate QR codes for receiving payments
+- **Merchant Payments**: Merchants get QR codes for customer scanning
+
+#### QR Code Scanning
+- **Camera Integration**: Uses device camera for real-time QR scanning
+- **Format Support**: Supports multiple QR code formats
+- **Auto-fill**: Automatically fills payment form with scanned data
+
+#### Supported QR Formats
 
 **Payment Request:**
 ```json
@@ -208,6 +220,25 @@ Supported wallets:
     "type": "merchant"
 }
 ```
+
+**Other Wallet QR (Compatibility):**
+```json
+{
+    "address": "0x...",
+    "amount": "0.1"
+}
+```
+
+**Plain Address:**
+- Simple wallet addresses (0x...)
+- ENS names (name.eth)
+
+#### QR Scanner Features
+- **Real-time Scanning**: Live camera feed with scan region highlighting
+- **Error Handling**: Clear error messages for invalid QR codes
+- **Multi-format Support**: Works with various wallet QR code formats
+- **Auto-close**: Scanner closes automatically after successful scan
+- **Permission Handling**: Requests camera permission gracefully
 
 ## Error Handling
 

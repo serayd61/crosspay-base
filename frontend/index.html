@@ -8,6 +8,7 @@
     <!-- Core Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
     
     <style>
         * {
@@ -455,6 +456,41 @@
             display: none !important;
         }
         
+        .qr-scanner-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .scanner-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-status {
+            margin-top: 15px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
         @media (max-width: 480px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -543,7 +579,22 @@
                 <div id="payPanel" class="panel active">
                     <div class="form-group">
                         <label>Recipient Address or ENS</label>
-                        <input type="text" id="recipientAddress" placeholder="0x... or name.eth">
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="recipientAddress" placeholder="0x... or name.eth" style="flex: 1;">
+                            <button class="btn-secondary" onclick="scanQRCode()" style="width: auto; padding: 12px 20px; background: #667eea; color: white; border-radius: 8px;">📷 Scan</button>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Scanner Modal -->
+                    <div id="qrScannerModal" class="qr-scanner-modal hidden">
+                        <div class="scanner-content">
+                            <div class="scanner-header">
+                                <h3>Scan QR Code</h3>
+                                <button onclick="closeQRScanner()" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+                            </div>
+                            <video id="qrVideo" style="width: 100%; max-width: 400px; border-radius: 10px;"></video>
+                            <div class="scanner-status" id="scannerStatus">Position QR code within the frame</div>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -1223,6 +1274,97 @@
                 }
             }
         }, 30000); // Every 30 seconds
+        
+        // QR Scanner functionality
+        let qrScanner = null;
+        
+        async function scanQRCode() {
+            try {
+                const video = document.getElementById('qrVideo');
+                const modal = document.getElementById('qrScannerModal');
+                const status = document.getElementById('scannerStatus');
+                
+                modal.classList.remove('hidden');
+                status.textContent = 'Starting camera...';
+                
+                // Initialize QR Scanner
+                qrScanner = new QrScanner(video, (result) => {
+                    handleQRResult(result.data);
+                    closeQRScanner();
+                }, {
+                    returnDetailedScanResult: true,
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                });
+                
+                await qrScanner.start();
+                status.textContent = 'Position QR code within the frame';
+                
+            } catch (error) {
+                console.error('QR Scanner error:', error);
+                showAlert('Camera access required for QR scanning', 'error');
+                closeQRScanner();
+            }
+        }
+        
+        function closeQRScanner() {
+            if (qrScanner) {
+                qrScanner.stop();
+                qrScanner.destroy();
+                qrScanner = null;
+            }
+            document.getElementById('qrScannerModal').classList.add('hidden');
+        }
+        
+        function handleQRResult(data) {
+            try {
+                console.log('QR Data:', data);
+                
+                // Try to parse as JSON (our format)
+                let qrData;
+                try {
+                    qrData = JSON.parse(data);
+                } catch (e) {
+                    // If not JSON, treat as plain address
+                    if (data.startsWith('0x') || data.endsWith('.eth')) {
+                        document.getElementById('recipientAddress').value = data;
+                        showAlert('Address scanned successfully!', 'success');
+                        return;
+                    } else {
+                        throw new Error('Invalid QR code format');
+                    }
+                }
+                
+                // Handle our payment QR format
+                if (qrData.to) {
+                    document.getElementById('recipientAddress').value = qrData.to;
+                    if (qrData.amount && qrData.amount !== '0') {
+                        document.getElementById('payAmount').value = qrData.amount;
+                    }
+                    showAlert('Payment QR scanned successfully!', 'success');
+                }
+                // Handle merchant QR format
+                else if (qrData.merchant) {
+                    document.getElementById('recipientAddress').value = qrData.merchant;
+                    showAlert('Merchant QR scanned successfully!', 'success');
+                }
+                // Handle other wallet QR formats
+                else if (qrData.address) {
+                    document.getElementById('recipientAddress').value = qrData.address;
+                    if (qrData.amount) {
+                        document.getElementById('payAmount').value = qrData.amount;
+                    }
+                    showAlert('Wallet QR scanned successfully!', 'success');
+                }
+                else {
+                    throw new Error('Unsupported QR code format');
+                }
+                
+            } catch (error) {
+                console.error('QR parsing error:', error);
+                showAlert('Invalid QR code: ' + error.message, 'error');
+            }
+        }
         
         // Handle deep links
         const urlParams = new URLSearchParams(window.location.search);
