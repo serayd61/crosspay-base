@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 contract CrossPayMVP {
-    // Merchant kayıtları
+    // Merchant registrations
     mapping(address => Merchant) public merchants;
     mapping(bytes32 => Payment) public payments;
     mapping(address => uint256) public userBalances;
@@ -55,7 +55,7 @@ contract CrossPayMVP {
         owner = msg.sender;
     }
     
-    // Merchant kayıt
+    // Merchant registration
     function registerMerchant(
         string memory _businessName,
         string memory _businessType
@@ -76,14 +76,14 @@ contract CrossPayMVP {
         emit MerchantRegistered(msg.sender, _businessName);
     }
     
-    // Kullanıcı para yükleme (prepaid)
+    // User fund deposit (prepaid)
     function deposit() external payable {
         require(msg.value > 0, "Must deposit something");
         userBalances[msg.sender] += msg.value;
         emit FundsDeposited(msg.sender, msg.value);
     }
     
-    // QR kod ödemesi
+    // QR code payment
     function payWithQR(
         address merchantAddress,
         uint256 amount,
@@ -138,7 +138,7 @@ contract CrossPayMVP {
         emit PaymentProcessed(msg.sender, merchantAddress, amount, invoiceId);
     }
     
-    // Direkt ödeme (QR olmadan)
+    // Direct payment (without QR)
     function payDirect(address merchantAddress) 
         external 
         payable 
@@ -167,7 +167,7 @@ contract CrossPayMVP {
         );
     }
     
-    // Para çekme
+    // Withdraw funds
     function withdraw(uint256 amount) external {
         require(userBalances[msg.sender] >= amount, "Insufficient balance");
         
@@ -204,7 +204,7 @@ contract CrossPayMVP {
         );
     }
     
-    // Batch payment için hazırlık (gelecek versiyon)
+    // Batch payment preparation (future version)
     struct BatchPayment {
         address merchant;
         uint256 amount;
