@@ -12,6 +12,21 @@ CrossPay bridges traditional payment experiences with Base blockchain, enabling 
 
 **Try it now:** [Open CrossPay App](https://serayd61.github.io/crosspay-base/frontend/)
 
+## 🆕 New: Loyalty Points System
+
+The new `CrossPayLoyalty.sol` contract adds a complete rewards system:
+- **Earn Points**: 1000 points per 1 ETH spent
+- **Tier System**: Bronze → Silver → Gold → Platinum with increasing rewards
+- **Merchant Campaigns**: Bonus multipliers for special promotions
+- **Redeem Points**: Convert points to discounts on future purchases
+
+| Tier | Points Required | Bonus Multiplier |
+|------|-----------------|------------------|
+| Bronze | 100 | 1.05x |
+| Silver | 500 | 1.15x |
+| Gold | 2,000 | 1.30x |
+| Platinum | 10,000 | 1.50x |
+
 ## ✨ Key Features
 
 ### For Merchants
