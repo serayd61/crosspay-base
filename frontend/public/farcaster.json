@@ -1,0 +1,17 @@
+{
+  "frame": {
+    "name": "CrossPay",
+    "version": "1",
+    "iconUrl": "https://crosspay-base.vercel.app/icon.png",
+    "homeUrl": "https://crosspay-base.vercel.app",
+    "imageUrl": "https://crosspay-base.vercel.app/preview.png",
+    "splashImageUrl": "https://crosspay-base.vercel.app/splash.png",
+    "splashBackgroundColor": "#1e3a8a",
+    "webhookUrl": "https://crosspay-base.vercel.app/api/webhook",
+    "subtitle": "Instant crypto payments",
+    "description": "Send and receive crypto payments on Base with QR codes. Only 1% fee. Multi-wallet support.",
+    "primaryCategory": "finance",
+    "tags": ["payments", "crypto", "base", "qr-code"]
+  }
+}
+
