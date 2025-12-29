@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#1e3a8a"/>
+  
+  <!-- Logo -->
+  <rect x="156" y="180" width="200" height="152" rx="30" fill="white" opacity="0.95"/>
+  
+  <!-- Card details -->
+  <circle cx="200" cy="256" r="20" fill="#3B82F6"/>
+  <circle cx="256" cy="256" r="20" fill="#06B6D4"/>
+  <circle cx="312" cy="256" r="20" fill="#3B82F6"/>
+  
+  <!-- Text -->
+  <text x="256" y="390" font-family="system-ui, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CrossPay</text>
+  <text x="256" y="430" font-family="system-ui, sans-serif" font-size="18" fill="#93C5FD" text-anchor="middle">Instant Crypto Payments</text>
+</svg>
+
