@@ -10,7 +10,15 @@
     "webhookUrl": "https://crosspay-base.vercel.app/api/webhook",
     "subtitle": "Instant crypto payments on Base",
     "description": "Send and receive crypto payments with QR codes on Base blockchain. Only 1% fee. Supports Farcaster, Coinbase, MetaMask wallets.",
-    "primaryCategory": "finance"
+    "primaryCategory": "finance",
+    "tags": ["payments", "crypto", "base", "qr-code", "wallet"],
+    "tagline": "Pay anyone instantly with 1% fees",
+    "buttonTitle": "Open CrossPay",
+    "heroImageUrl": "https://crosspay-base.vercel.app/image.png",
+    "ogTitle": "CrossPay - Instant Crypto Payments",
+    "ogDescription": "Send and receive crypto payments on Base with QR codes. Only 1% fee.",
+    "ogImageUrl": "https://crosspay-base.vercel.app/image.png",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Check+out+CrossPay+-+instant+crypto+payments+on+Base!+https://crosspay-base.vercel.app"
   },
   "accountAssociation": {
     "header": "eyJmaWQiOjIwODY0NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGM1NjhlQTVjY0M2OEVkMDE5NDNFODQ3YWVDMTY2MTY3NTA2NDhENjUifQ",
