@@ -13,6 +13,23 @@ const nextConfig: NextConfig = {
         source: '/.well-known/farcaster.json',
         destination: '/farcaster.json',
       },
+      // Dynamic image generation
+      {
+        source: '/icon.png',
+        destination: '/api/og?type=icon',
+      },
+      {
+        source: '/image.png',
+        destination: '/api/og?type=preview',
+      },
+      {
+        source: '/splash.png',
+        destination: '/api/og?type=splash',
+      },
+      {
+        source: '/preview.png',
+        destination: '/api/og?type=preview',
+      },
     ];
   },
   async headers() {
