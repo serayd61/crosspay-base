@@ -12,6 +12,11 @@ import {
 import { useFarcaster } from '@/providers/FarcasterProvider';
 import sdk from '@farcaster/frame-sdk';
 import toast from 'react-hot-toast';
+import { TransactionStatus, TransactionButton } from '@/components/TransactionStatus';
+import { NetworkSwitcher } from '@/components/NetworkSwitcher';
+import { useTransaction } from '@/hooks/useTransaction';
+import { getErrorMessage, parseWeb3Error } from '@/lib/errors';
+import { validateAddress } from '@/lib/contracts';
 
 // CrossPay Contract
 const CROSSPAY_ADDRESS = '0x4d45baa1909b7f061b514ef50034c55d0b79b262';
@@ -34,6 +39,22 @@ export default function Home() {
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending } = useSendTransaction();
+  const {
+    sendTransaction: sendTx,
+    hash: txHash,
+    isLoading: isTxLoading,
+    isConfirmed,
+    error: txError,
+  } = useTransaction({
+    onSuccess: (hash) => {
+      toast.success('Transaction sent!');
+      setPaymentAmount('');
+      setRecipientAddress('');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
 
   const [activeTab, setActiveTab] = useState<Tab>('pay');
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -84,6 +105,19 @@ export default function Home() {
       return;
     }
 
+    // Validate address
+    if (!validateAddress(recipientAddress)) {
+      toast.error('Invalid recipient address');
+      return;
+    }
+
+    // Validate amount
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Invalid amount');
+      return;
+    }
+
     try {
       // Check if in Farcaster and use their provider
       if (isInFrame && connectedAddress) {
@@ -104,16 +138,14 @@ export default function Home() {
         }
       }
 
-      // Regular wagmi transaction
-      sendTransaction({
+      // Use enhanced transaction hook
+      await sendTx({
         to: recipientAddress as `0x${string}`,
-        value: parseEther(paymentAmount),
+        value: paymentAmount,
       });
-      toast.success('Payment sent!');
-      setPaymentAmount('');
-      setRecipientAddress('');
     } catch (error) {
-      toast.error('Payment failed');
+      const parsedError = parseWeb3Error(error);
+      toast.error(getErrorMessage(parsedError));
     }
   };
 
@@ -205,6 +237,7 @@ export default function Home() {
             {/* User Info / Connect */}
             {walletAddress ? (
               <div className="flex items-center gap-3">
+                <NetworkSwitcher />
                 {isInFrame && user.pfpUrl && (
                   <img src={user.pfpUrl} alt="" className="w-8 h-8 rounded-full border-2 border-purple-400" />
                 )}
@@ -352,20 +385,26 @@ export default function Home() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handlePay}
-                  disabled={!walletAddress || isPending || !recipientAddress || !paymentAmount}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold text-lg flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Send Payment
-                    </>
+                <div className="space-y-3">
+                  <TransactionButton
+                    onClick={handlePay}
+                    disabled={!walletAddress || isTxLoading || !recipientAddress || !paymentAmount}
+                    isLoading={isTxLoading}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold text-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-5 h-5" />
+                    Send Payment
+                  </TransactionButton>
+                  {txHash && (
+                    <TransactionStatus
+                      hash={txHash}
+                      onSuccess={() => {
+                        setPaymentAmount('');
+                        setRecipientAddress('');
+                      }}
+                    />
                   )}
-                </button>
+                </div>
               </div>
             )}
 
