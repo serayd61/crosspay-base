@@ -8,8 +8,6 @@ import {
   coinbaseWallet, 
   injected, 
   walletConnect,
-  safe,
-  phantom,
 } from 'wagmi/connectors';
 
 const queryClient = new QueryClient({
@@ -67,10 +65,6 @@ export const wagmiConfig = createConfig({
         icons: ['https://crosspay-base.vercel.app/icon.png'],
       },
     }),
-    // Safe Wallet
-    safe(),
-    // Phantom Wallet
-    phantom(),
   ],
   transports: {
     [base.id]: http(getRpcUrl(base.id)),
